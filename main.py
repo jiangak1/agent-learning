@@ -1,7 +1,9 @@
+from unittest import result
+
 import fastapi
 from enum import Enum
 from fastapi import FastAPI
-
+from pydantic import BaseModel
 #@app.get('/user/{username}')#路径参数username的值会作为参数username传递给你的函数
 #def get_user(username: str, age: int):#?age是query参数属于附加条件需要声明路径参数的类型
 #    return {"user": username, "age": age}
@@ -18,6 +20,16 @@ class modelName(str, Enum):
     alexnet = "alexnet"#均为机器学习模型的名字
     resnet = "resnet"
     lenet = "lenet"
+
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+#请求体#dict = 随便的数据
+#BaseModel = 有规则的数据（工程必须）
+
 app = FastAPI()
 
 @app.get("/model/{model_name}")
@@ -43,3 +55,19 @@ async def read_item(item_id: str,q:str|None=None,short:bool=False):
         item.update({"description":"这是一个疯狂的item有着很长的解释"})
     return item
 #必选查询参数|仅可选的查询参数可以设置为none，必选查询参数不要声明默认值
+#------------------------------------------------------------------
+#请求体
+@app.post("/items/")
+async def create_item(item: Item):
+    item_dict = item.model_dump()#model_dump转换为字典
+    if item.tax is not None:
+        price_with_tax = item.price + item.tax
+        item_dict.update({"price_with_tax": price_with_tax})
+    return item_dict
+@app.put("/items/{item_id}")#post|delete|put|get增删改查
+async def update_item(item_id: int,item: Item,Q:str |None=None):
+    result = {"item_id":item_id,**item.model_dump()}
+    if Q:
+        result.update({"Q":Q})
+    return  result  #result用来翻译result = 用来存放“最终返回给前端的数据”
+
