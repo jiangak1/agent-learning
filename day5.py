@@ -16,10 +16,11 @@ memory={
     "DONGHUA":[{"role": "system", "content": "你是一个资深二次元"}],
     "GAME":[{"role": "system", "content": "你是资深游戏玩家"}]
 }
-#请求体
+
 class ChatRequest(BaseModel):
     user_id: str
     message: str
+# 请求体
 @app.post("/chat")
 async def chat(req : ChatRequest ):
     user_id=req.user_id
