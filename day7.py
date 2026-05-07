@@ -129,8 +129,9 @@ async def chat(req : ChatRequest ):
     if msg.tool_calls:
         tool_call=msg.tool_calls[0]
         function_name=tool_call.function.name
-        args=json.loads(tool_call.function.arguments)
+        args=json.loads(tool_call.function.arguments)#python和json相互转换loads和dumps
         try:
+
             result=tool_map[function_name](**args)
         except Exception as e:
             result=f"工具调用失败:{str(e)}"
