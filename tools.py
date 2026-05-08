@@ -1,18 +1,8 @@
 import requests
 import json
 import os
-from openai import OpenAI
-from dotenv import load_dotenv
-from fastapi import FastAPI
-from pydantic import BaseModel
 
-load_dotenv("deepseek_key.env")
 
-app = FastAPI()
-client = OpenAI(
-    api_key=os.getenv("deepseek_key"),
-    base_url="https://api.deepseek.com/v1"
-)
 tools = [
     {
         "type": "function",
@@ -34,7 +24,7 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_calculator",
+            "name": "calculator",
             "description": "计算用户提供的数学表达式",
             "parameters": {
                 "type": "object",
@@ -49,17 +39,6 @@ tools = [
         }
     }
 ]
-memory = {
-    "GAME": [{"role": "system", "content": "你是一个游戏专家"}],
-    "MATH": [{"role": "system", "content": "你是一个数学老师"}]
-}
-
-
-class ChatRequest(BaseModel):
-    user_id: str
-    message: str
-
-
 def get_game_info(game_name: str):
 
     try:
@@ -162,66 +141,8 @@ def calculator(expression: str):
         return str(result)
     except:
         return "计算错误"
-#————————————————————————————————————————————————————————————————————————————
 
 tool_map = {
     "get_game_info": get_game_info,
-    "get_calculator": calculator
+    "calculator": calculator
 }
-#——————————————————————————————————————————————————
-
-@app.post("/chat")
-async def chat(req: ChatRequest):
-    user_id = req.user_id
-    message = req.message
-    if user_id not in memory:
-        memory[user_id] = [
-            {"role": "system", "content": "请问您有什么需要？"}
-        ]
-    memory[user_id].append({"role": "user", "content": message})
-#初始访问---------------------------------------------------------
-
-    max_steps = 3
-    for _ in range(max_steps):
-        response=client.chat.completions.create(
-            model="deepseek-v4-flash",
-            messages=memory[user_id],
-            tools=tools,
-            max_tokens=200,
-            extra_body={"thinking": {"type": "enabled"}}
-        )
-        msg=response.choices[0].message
-
-#没有tool_calls说明结束了
-        if not msg.tool_calls:
-            reply =msg.content
-            memory[user_id].append(
-                {
-                    "role":"assistant",
-                    "content": reply
-                }
-            )
-            return {"reply":reply}
-        memory[user_id].append(msg)
-        for tool_call in msg.tool_calls:
-            function_name=tool_call.function.name
-            args=json.loads(tool_call.function.arguments)
-            try:
-                result=tool_map[function_name](**args)
-            except Exception as e:
-                result=f"工具错误:{str(e)}"
-            memory[user_id].append({
-                 "role":"tool",
-                "tool_call_id":tool_call.id,
-                "content":str(result)}
-            )
-            continue
-
-
-
-
-
-
-
-
-
